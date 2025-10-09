@@ -2,6 +2,10 @@
 
 Extract upstream PAM + 32-nt guides from genes and predict guide activity with a trained model pipeline.
 
+## Online tool
+- You can use the tool directly by visiting our online portal [MultiCAST_guide_predictor](https://multicastguidepredictor-v1.streamlit.app/) now!
+
+## To run model locally
 ## Requirements
 
 - Python 3.9+
@@ -9,6 +13,25 @@ Extract upstream PAM + 32-nt guides from genes and predict guide activity with a
 
 ```bash
 pip install biopython numpy pandas scikit-learn==1.3.2 joblib
+```
+```bash
+# clone repo
+git clone https://github.com/YiyanYang0728/MultiCAST_guide_predictor.git
+cd MultiCAST_guide_predictor.git
+```
+
+## Example
+
+Using the bundled example files:
+
+```bash
+python MultiCAST_guide_predictor.py \
+  -g example/GCF_008369605.1.fna \
+  -f example/GCF_008369605.1.gff \
+  -l example/gene.csv \
+  -m model/model.joblib \
+  -o results/predictions \
+  --write-guides results/guides.csv
 ```
 
 ## Usage
@@ -33,20 +56,6 @@ python MultiCAST_guide_predictor.py \
 - `-o, --outprefix` *(default: `results/predictions`)*: Output prefix for predictions CSV
 - `--threshold` *(default: `0.5`)*: Probability cutoff used to create `pred_label_thr`
 - `--write-guides` *(optional)*: Also write the extracted guides table (CSV) to this path
-
-## Example
-
-Using the bundled example files:
-
-```bash
-python MultiCAST_guide_predictor.py \
-  -g example/GCF_008369605.1.fna \
-  -f example/GCF_008369605.1.gff \
-  -l example/gene.csv \
-  -m model/model.joblib \
-  -o results/predictions \
-  --write-guides results/guides.csv
-```
 
 ## Inputs
 
@@ -75,5 +84,3 @@ python MultiCAST_guide_predictor.py \
 
 - If you see `No guides found`, double-check that your gene IDs exist in the GFF3 and that PAM sites are present.
 
-## Online tool
-- You can use the tool directly by visiting our online portal [MultiCAST_guide_predictor](https://multicastguidepredictor-v1.streamlit.app/) now!
