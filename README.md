@@ -9,16 +9,17 @@ Extract upstream PAM + 32-nt guides from genes and predict guide activity with a
 ## To run model locally >>>
 ## Requirements
 
-- Python 3.9+
+- Python 3.13+
 - Packages: `biopython`, `numpy`, `pandas`, `scikit-learn`, `joblib`, `scikit-learn`
 
 ```bash
-pip install biopython numpy pandas scikit-learn==1.3.2 joblib
+pip install -r requirements.txt
 ```
+
 ```bash
 # clone repo
 git clone https://github.com/YiyanYang0728/MultiCAST_guide_predictor.git
-cd MultiCAST_guide_predictor.git
+cd MultiCAST_guide_predictor/
 ```
 
 ## Example
