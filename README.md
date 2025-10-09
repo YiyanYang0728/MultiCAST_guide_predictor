@@ -33,7 +33,6 @@ python MultiCAST_guide_predictor.py \
   -l example/gene.csv \
   -m model/model.joblib \
   -o results/predictions \
-  --write-guides results/guides.csv
 ```
 
 ## Usage
@@ -46,7 +45,6 @@ python MultiCAST_guide_predictor.py \
   --model model.joblib \
   [--outprefix results/predictions] \
   [--threshold 0.5] \
-  [--write-guides guides.csv]
 ```
 
 ### Options
@@ -57,7 +55,6 @@ python MultiCAST_guide_predictor.py \
 - `-m, --model` **(required)**: Path to trained **scikit-learn pipeline** serialized with joblib (optionally includes XGBoost), e.g. `model/model.joblib`
 - `-o, --outprefix` *(default: `results/predictions`)*: Output prefix for predictions CSV
 - `--threshold` *(default: `0.5`)*: Probability cutoff used to create `pred_label_thr`
-- `--write-guides` *(optional)*: Also write the extracted guides table (CSV) to this path
 
 ## Inputs
 
@@ -75,12 +72,10 @@ python MultiCAST_guide_predictor.py \
 ## Outputs
 
 - **`<outprefix>.csv`** (e.g., `results/predictions.csv`) with columns:
-  - `gene`, `pam_region`, `guide_sequence`
+  - `gene`, `pam_region`, `guide_sequence`, `sequence_number`, `strand`, `center`
   - `proba_pos` — predicted probability (class 1)
   - `pred_label_thr` — 0/1 using `--threshold`
   - `proba_rank` — rank of `proba_pos` (1 = lowest if ascending; useful for prioritization)
-- **`--write-guides <path>`** (optional): Full guide table including extra context (strand, index, near-center flag).  
-  If the detailed table isn’t available, a minimal `{Gene, PAM_Region, Guide_Sequence}` CSV is written.
 
 ## Notes & Tips
 

@@ -9,8 +9,6 @@ python MultiCAST_guide_predictor.py \
 
 Optional:
   --threshold 0.5
-  --write-guides example/guides.csv    # also save the extracted guides
-
 Requires
 --------
 - biopython, numpy, pandas, scikit-learn, joblib
@@ -72,7 +70,7 @@ def parse_gff3(gff3_file):
 
 def find_cn_pam_guides(sequence, gene_length, gene_strand):
     """
-    Find all CN PAM sites with upstream context and downstream 32nt guide sequences.
+    Find all PAM sites with upstream context and downstream 32nt guide sequences.
     Returns list of (pam_n_pos, upstream_pam(5nt), guide(32nt), strand_type, near_region).
     """
     results = []
@@ -114,10 +112,12 @@ def find_cn_pam_guides(sequence, gene_length, gene_strand):
     return results
 
 
-def extract_guides(genome_fasta: str, gff3_file: str, genes_csv: str) -> pd.DataFrame:
+# --- replace the old extract_guides with this version ---
+def extract_guides(genome_fasta: str, gff3_file: str, genes_csv: str) -> tuple[pd.DataFrame, List[str]]:
     """
-    Returns a DataFrame with columns: gene, pam_region, guide_sequence
-    (plus extra columns preserved if you want to save them).
+    Returns:
+      - DataFrame with columns: gene, pam_region, guide_sequence, sequence_number, strand, center
+      - List[str]: genes requested but not found in the GFF3
     """
     # Load genome
     genome = {record.id: record.seq for record in SeqIO.parse(genome_fasta, 'fasta')}
@@ -134,11 +134,12 @@ def extract_guides(genome_fasta: str, gff3_file: str, genes_csv: str) -> pd.Data
                 wanted_genes.append(row[0])
 
     rows_simple = []   # minimal columns for the model
-    rows_full = []     # optional extra info if writing out
+    missing_genes: List[str] = []
 
     for gene_name in wanted_genes:
         if gene_name not in genes:
-            # silently skip missing genes (mirrors original behavior)
+            # record missing genes so we can report them
+            missing_genes.append(gene_name)
             continue
 
         info = genes[gene_name]
@@ -154,27 +155,17 @@ def extract_guides(genome_fasta: str, gff3_file: str, genes_csv: str) -> pd.Data
 
         guides = find_cn_pam_guides(orf_seq, gene_length, strand)
         for i, (pos, upstream_pam, guide, strand_type, near_region) in enumerate(guides, 1):
-            # minimal set used by your model
             rows_simple.append({
                 "gene": gene_name,
                 "pam_region": upstream_pam,
-                "guide_sequence": guide
-            })
-            # optional extras
-            rows_full.append({
-                "Gene": gene_name,
-                "PAM_Region": upstream_pam,
-                "Guide_Sequence": guide,
-                "Sequence_Number": i,
-                "Strand": strand_type,
-                "Center": near_region
+                "guide_sequence": guide,
+                "sequence_number": i,
+                "strand": strand_type,
+                "center": near_region
             })
 
     df_simple = pd.DataFrame(rows_simple)
-    df_full = pd.DataFrame(rows_full)
-    # Attach full table so caller can optionally save it
-    df_simple.attrs["full_table"] = df_full
-    return df_simple
+    return df_simple, missing_genes
 
 # --------------------------- Part 2: Features + predict (from your second script) ---------------------------
 
@@ -221,10 +212,8 @@ def kmer_exact_counts(seq: str, k: int, prefix: str) -> Dict[str, int]:
             feats[key] = feats.get(key, 0) + 1
     return feats
 
-def row_to_feat(r, add_globals: bool = True, include_gene: bool = False) -> Dict[str, float | int]:
+def row_to_feat(r) -> Dict[str, float | int]:
     feats: Dict[str, float | int] = {}
-    if include_gene:
-        feats[f"gene={str(r['gene'])}"] = 1
 
     pam = str(r["pam_region"]).strip().upper()
     for i, b in enumerate(pam):
@@ -234,22 +223,21 @@ def row_to_feat(r, add_globals: bool = True, include_gene: bool = False) -> Dict
     for i, b in enumerate(guide):
         feats[f"guide_{i}={b}"] = 1
 
-    if add_globals:
-        gc = guide.count("G") + guide.count("C")
-        feats["guide_cnt_gc"] = gc
-        for b in "ACGT":
-            feats[f"guide_cnt_{b}"] = guide.count(b)
+    gc = guide.count("G") + guide.count("C")
+    feats["guide_cnt_gc"] = gc
+    for b in "ACGT":
+        feats[f"guide_cnt_{b}"] = guide.count(b)
 
-        for b in "ACGT":
-            feats[f"guide_max_run_{b}"] = max_run_length(guide, b)
+    for b in "ACGT":
+        feats[f"guide_max_run_{b}"] = max_run_length(guide, b)
 
-        feats["guide_entropy"] = shannon_entropy(guide)
+    feats["guide_entropy"] = shannon_entropy(guide)
 
-        for b in "ACGT":
-            feats[f"pam_cnt_{b}"] = pam.count(b)
+    for b in "ACGT":
+        feats[f"pam_cnt_{b}"] = pam.count(b)
 
-        feats.update(kmer_exact_counts(guide, 2, "k2"))
-        feats.update(kmer_exact_counts(guide, 3, "k3"))
+    feats.update(kmer_exact_counts(guide, 2, "k2"))
+    feats.update(kmer_exact_counts(guide, 3, "k3"))
 
     return feats
 
@@ -258,7 +246,7 @@ def build_feature_dicts(df: pd.DataFrame) -> List[Dict[str, float | int]]:
 
 def run_prediction(df_input: pd.DataFrame, model_path: str, outprefix: str, threshold: float = 0.5) -> str:
     """
-    Takes a df with columns ['gene','pam_region','guide_sequence'], writes <outprefix>.csv
+    Takes a df with columns ['gene','pam_region','guide_sequence','seq_number','strand','center'], writes <outprefix>.csv
     with probabilities and thresholded predictions. Returns the written path.
     """
     os.makedirs(os.path.dirname(outprefix) or ".", exist_ok=True)
@@ -288,27 +276,20 @@ def main():
     ap.add_argument("--model", "-m", required=True, help="Path to trained pipeline (e.g., model/final_model.joblib)")
     ap.add_argument("--outprefix", "-o", default="results/predictions", help="Output prefix for predictions CSV (default results/predictions)")
     ap.add_argument("--threshold", type=float, default=0.5, help="Decision threshold for predicted label (default 0.5)")
-    ap.add_argument("--write-guides", default=None, help="Optional path to also write extracted guides table (CSV)")
     args = ap.parse_args()
 
     # 1) Extract guides
-    df_guides = extract_guides(args.genome, args.gff3, args.genes)
+    df_guides, missing = extract_guides(args.genome, args.gff3, args.genes)
+
+    if missing:
+        print(f"[WARN] {len(missing)} gene(s) from {args.genes} not found in {args.gff3}:")
+        for g in missing:
+            print(f"  - {g}")
+        print("Please check the genes' IDs or names!")
 
     if df_guides.empty:
         raise SystemExit("No guides found. Check your inputs (genes present in GFF3, CN-PAM presence, etc.).")
-
-    # Optionally write the more detailed guides table, matching your original columns
-    if args.write_guides:
-        full = df_guides.attrs.get("full_table", pd.DataFrame())
-        if full.empty:
-            # fallback: write minimal columns if full not present
-            df_guides.rename(columns={
-                "gene": "Gene", "pam_region": "PAM_Region", "guide_sequence": "Guide_Sequence"
-            }).to_csv(args.write_guides, index=False)
-        else:
-            os.makedirs(os.path.dirname(args.write_guides) or ".", exist_ok=True)
-            full.to_csv(args.write_guides, index=False)
-
+    
     # 2) Predict
     pred_path = run_prediction(
         df_guides,
@@ -317,8 +298,6 @@ def main():
         threshold=args.threshold
     )
     print(f"Wrote predictions to: {pred_path}")
-    if args.write_guides:
-        print(f"Wrote extracted guides to: {args.write_guides}")
 
 if __name__ == "__main__":
     main()

@@ -28,7 +28,6 @@ WORKDIR = Path(st.session_state["workdir"])
 with st.sidebar:
     st.header("Settings")
     threshold = st.slider("Decision threshold", 0.0, 1.0, 0.5, 0.01)
-    write_guides = st.checkbox("Also export extracted guides (CSV)", value=False)
     st.divider()
     use_examples = st.toggle("Use bundled example data", value=False, help="Uses files in ./example and ./model")
 
@@ -47,9 +46,10 @@ def load_model(model_path: Path):
 
 def run_pipeline(genome_p: Path, gff3_p: Path, genes_p: Path, model_p: Path, threshold: float):
     # 1) Extract guides
-    df_guides = extract_guides(str(genome_p), str(gff3_p), str(genes_p))
+    df_guides, missing_genes = extract_guides(str(genome_p), str(gff3_p), str(genes_p))
+
     if df_guides.empty:
-        raise RuntimeError("No guides found. Check that genes exist in GFF3 and PAMs are present.")
+        raise RuntimeError("No guides found. Check that genes exist in GFF3 and that PAM sites are present.")
 
     # 2) Predict (reuse your feature builder + cached model)
     model = load_model(model_p)
@@ -62,15 +62,9 @@ def run_pipeline(genome_p: Path, gff3_p: Path, genes_p: Path, model_p: Path, thr
     out_df["pred_label_thr"] = yhat
     out_df["proba_rank"] = out_df["proba_pos"].rank(method="average", ascending=True)
 
-    # Optional full guides table
-    full_guides = df_guides.attrs.get("full_table", pd.DataFrame())
-    if full_guides.empty:
-        # fallback to minimal columns if detailed table wasn't attached
-        full_guides = df_guides.rename(
-            columns={"gene": "Gene", "pam_region": "PAM_Region", "guide_sequence": "Guide_Sequence"}
-        )
+    # Return both outputs so the UI can decide how to display warnings
+    return out_df, missing_genes
 
-    return out_df, full_guides
 
 # --- Inputs
 example_dir = Path(__file__).parent / "example"
@@ -112,7 +106,20 @@ run_btn = st.button("🚀 Run prediction", disabled=not can_run)
 if run_btn and can_run:
     try:
         with st.spinner("Extracting guides and running model..."):
-            preds_df, guides_df = run_pipeline(genome_path, gff3_path, genes_path, model_path, threshold)
+            preds_df, missing_genes = run_pipeline(genome_path, gff3_path, genes_path, model_path, threshold)
+
+        # Show missing genes (if any) with download option
+        if missing_genes:
+            st.warning(f"{len(missing_genes)} gene(s) from the CSV were not found in the GFF3.")
+            with st.expander("Show missing gene IDs"):
+                st.code("\n".join(str(g) for g in missing_genes), language="text")
+            # missing_csv = pd.DataFrame({"missing_gene": missing_genes}).to_csv(index=False).encode()
+            # st.download_button(
+            #     "Download missing_genes.csv",
+            #     missing_csv,
+            #     file_name="missing_genes.csv",
+            #     mime="text/csv",
+            # )
 
         st.success("Done! Preview below.")
         st.subheader("Predictions")
@@ -123,13 +130,6 @@ if run_btn and can_run:
         pred_csv = preds_df.to_csv(index=False).encode()
         st.download_button("Download predictions.csv", pred_csv, file_name="predictions.csv", mime="text/csv")
 
-        if write_guides:
-            st.subheader("Extracted guides")
-            st.markdown("_Only the first 50 rows are shown. Use the **Download** button for the full result._")
-            st.dataframe(guides_df.head(51), use_container_width=True)
-            guides_csv = guides_df.to_csv(index=False).encode()
-            st.download_button("Download guides.csv", guides_csv, file_name="guides.csv", mime="text/csv")
-
     except Exception as e:
         st.error(f"Error: {e}")
 
@@ -139,6 +139,7 @@ with st.expander("ℹ️  Notes & Tips"):
         """
 - **Gene list CSV**: one gene identifier per line (must match one of the GFF3 attributes: `ID`, `Name`, `locus_tag`, or `gene`).
 - If you see `No guides found`, double-check that your gene IDs exist in the GFF3 and that PAM sites are present.
+- If some genes are **missing from the GFF3**, a warning will appear with a list and a download for `missing_genes.csv`.
 """
     )
 
