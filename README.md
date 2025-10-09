@@ -75,3 +75,5 @@ python MultiCAST_guide_predictor.py \
 
 - If you see `No guides found`, double-check that your gene IDs exist in the GFF3 and that PAM sites are present.
 
+## Online tool
+- You can use the tool directly by visiting our online portal [MultiCAST_guide_predictor](https://multicastguidepredictor-v1.streamlit.app/) now!
