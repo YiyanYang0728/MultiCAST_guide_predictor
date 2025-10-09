@@ -28,7 +28,7 @@ WORKDIR = Path(st.session_state["workdir"])
 with st.sidebar:
     st.header("Settings")
     threshold = st.slider("Decision threshold", 0.0, 1.0, 0.5, 0.01)
-    write_guides = st.checkbox("Also export extracted guides (CSV)", value=True)
+    write_guides = st.checkbox("Also export extracted guides (CSV)", value=False)
     st.divider()
     use_examples = st.toggle("Use bundled example data", value=False, help="Uses files in ./example and ./model")
     st.caption("Tip: Pin scikit-learn to the version used to train your model for joblib compatibility.")
@@ -117,15 +117,17 @@ if run_btn and can_run:
 
         st.success("Done! Preview below.")
         st.subheader("Predictions")
-        st.dataframe(preds_df.head(50), use_container_width=True)
+        st.markdown("_Only the first 50 rows are shown. Use the **Download** button for the full result._")
+        st.dataframe(preds_df.head(51), use_container_width=True)
 
         # Downloads
         pred_csv = preds_df.to_csv(index=False).encode()
         st.download_button("Download predictions.csv", pred_csv, file_name="predictions.csv", mime="text/csv")
 
         if write_guides:
-            st.subheader("Extracted guides (full)")
-            st.dataframe(guides_df.head(50), use_container_width=True)
+            st.subheader("Extracted guides")
+            st.markdown("_Only the first 50 rows are shown. Use the **Download** button for the full result._")
+            st.dataframe(guides_df.head(51), use_container_width=True)
             guides_csv = guides_df.to_csv(index=False).encode()
             st.download_button("Download guides.csv", guides_csv, file_name="guides.csv", mime="text/csv")
 
