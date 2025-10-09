@@ -135,10 +135,11 @@ if run_btn and can_run:
         st.error(f"Error: {e}")
 
 # --- Footer / Help
-with st.expander("ℹ️ Notes & Tips"):
+with st.expander("ℹ️  Notes & Tips"):
     st.markdown(
         """
 - **Gene list CSV**: one gene identifier per line (must match one of the GFF3 attributes: `ID`, `Name`, `locus_tag`, or `gene`).
+- If you see `No guides found`, double-check that your gene IDs exist in the GFF3 and that PAM sites are present.
 """
     )
 
