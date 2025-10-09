@@ -31,7 +31,6 @@ with st.sidebar:
     write_guides = st.checkbox("Also export extracted guides (CSV)", value=False)
     st.divider()
     use_examples = st.toggle("Use bundled example data", value=False, help="Uses files in ./example and ./model")
-    st.caption("Tip: Pin scikit-learn to the version used to train your model for joblib compatibility.")
 
 # --- Helpers
 def save_upload(uploaded_file, dest_name: str) -> Path:
