@@ -1,4 +1,4 @@
-# MultiCAST Guide Predictor (CLI)
+# MultiCAST Guide Predictor
 
 Extract upstream PAM + 32-nt guides from genes and predict guide activity with a trained model pipeline.
 
@@ -57,9 +57,9 @@ python MultiCAST_guide_predictor.py \
 ## What it does
 
 1. Parses the GFF3 and extracts each requested gene’s ORF (reverse-complements if on `-` strand).
-2. Scans for **C N** PAM sites with upstream context and downstream **32-nt guide** windows on both strands.
+2. Scans for PAM sites with upstream context and downstream **32-nt guide** windows on both strands.
 3. Builds features for each candidate (PAM/guide positions, counts, runs, entropy, k-mers).
-4. Loads your trained pipeline (`joblib`) and predicts **probability of positive activity**.
+4. Loads a trained pipeline (`joblib`) and predicts **probability of positive activity**.
 
 ## Outputs
 

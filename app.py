@@ -50,7 +50,7 @@ def run_pipeline(genome_p: Path, gff3_p: Path, genes_p: Path, model_p: Path, thr
     # 1) Extract guides
     df_guides = extract_guides(str(genome_p), str(gff3_p), str(genes_p))
     if df_guides.empty:
-        raise RuntimeError("No guides found. Check that genes exist in GFF3 and CN-PAMs are present.")
+        raise RuntimeError("No guides found. Check that genes exist in GFF3 and PAMs are present.")
 
     # 2) Predict (reuse your feature builder + cached model)
     model = load_model(model_p)
@@ -76,31 +76,30 @@ def run_pipeline(genome_p: Path, gff3_p: Path, genes_p: Path, model_p: Path, thr
 # --- Inputs
 example_dir = Path(__file__).parent / "example"
 model_dir = Path(__file__).parent / "model"
+model_path  = model_dir / "model.joblib"
 
 if use_examples:
     # Use repo-bundled files
     genome_path = example_dir / "GCF_008369605.1.fna"
     gff3_path   = example_dir / "GCF_008369605.1.gff"
     genes_path  = example_dir / "gene.csv"
-    model_path  = model_dir / "model.joblib"
 
     # Quick file presence check
     missing = [p for p in [genome_path, gff3_path, genes_path, model_path] if not p.exists()]
     if missing:
         st.error(f"Example files missing: {', '.join(str(m) for m in missing)}")
 else:
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     with c1:
         genome_up = st.file_uploader("Genome FASTA (.fna/.fa/.fasta)", type=["fna", "fa", "fasta"])
-        gff3_up   = st.file_uploader("Annotation GFF3 (.gff/.gff3)", type=["gff", "gff3"])
     with c2:
+        gff3_up   = st.file_uploader("Annotation GFF3 (.gff/.gff3)", type=["gff", "gff3"])
+    with c3:
         genes_up  = st.file_uploader("Gene list CSV (one ID per line)", type=["csv"])
-        model_up  = st.file_uploader("Trained model (.joblib)", type=["joblib", "pkl"])
 
     genome_path = save_upload(genome_up, "genome.fna") if genome_up else None
     gff3_path   = save_upload(gff3_up, "annotation.gff3") if gff3_up else None
     genes_path  = save_upload(genes_up, "genes.csv") if genes_up else None
-    model_path  = save_upload(model_up, "model.joblib") if model_up else None
 
 # --- Run
 can_run = (
@@ -138,8 +137,6 @@ with st.expander("ℹ️ Notes & Tips"):
     st.markdown(
         """
 - **Gene list CSV**: one gene identifier per line (must match one of the GFF3 attributes: `ID`, `Name`, `locus_tag`, or `gene`).
-- **Model compatibility**: `joblib` pickles are version-sensitive. Pin **scikit-learn** (and **xgboost** if used) to the versions you trained with.
-- **Privacy**: This app runs wherever you deploy it. For sensitive genomes, prefer running locally or on a secured private Space/server.
 """
     )
 
