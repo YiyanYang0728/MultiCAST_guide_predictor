@@ -139,7 +139,6 @@ with st.expander("ℹ️  Notes & Tips"):
         """
 - **Gene list CSV**: one gene identifier per line (must match one of the GFF3 attributes: `ID`, `Name`, `locus_tag`, or `gene`).
 - If you see `No guides found`, double-check that your gene IDs exist in the GFF3 and that PAM sites are present.
-- If some genes are **missing from the GFF3**, a warning will appear with a list and a download for `missing_genes.csv`.
 """
     )
 
