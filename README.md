@@ -32,14 +32,14 @@ python MultiCAST_guide_predictor.py \
   -f example/GCF_008369605.1.gff \
   -l example/gene.csv \
   -m model/model.joblib \
-  -o results/predictions \
+  -o results/predictions
 ```
 
 ## Usage
 
 ```bash
 python MultiCAST_guide_predictor.py \
-  --genome GENOME.fna \
+  --genome genome.fna \
   --gff3 annotation.gff3 \
   --genes genes.csv \
   --model model.joblib \
