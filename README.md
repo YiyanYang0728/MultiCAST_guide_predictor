@@ -5,7 +5,8 @@ Extract upstream PAM + 32-nt guides from genes and predict guide activity with a
 ## Online tool
 - You can use the tool directly by visiting our online portal [MultiCAST_guide_predictor](https://multicastguidepredictor-v1.streamlit.app/) now!
 
-## To run model locally
+
+## To run model locally >>>
 ## Requirements
 
 - Python 3.9+
