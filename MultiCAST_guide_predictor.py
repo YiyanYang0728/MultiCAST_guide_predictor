@@ -16,7 +16,7 @@ Requires
 
 import argparse
 import csv
-import os
+import os,io
 import re
 from pathlib import Path
 from typing import Dict, List
@@ -127,11 +127,17 @@ def extract_guides(genome_fasta: str, gff3_file: str, genes_csv: str) -> tuple[p
 
     # Read gene list
     wanted_genes: List[str] = []
-    with open(genes_csv, 'r') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if row:
-                wanted_genes.append(row[0])
+
+    with open(genes_csv, "rb") as f:
+        raw = f.read()
+
+    # Normalize \r\n and lone \r to \n
+    raw = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    text = raw.decode("utf-8-sig", errors="replace")
+    reader = csv.reader(io.StringIO(text), skipinitialspace=True)
+    for row in reader:
+        if row:
+            wanted_genes.append(row[0].strip())
 
     rows_simple = []   # minimal columns for the model
     missing_genes: List[str] = []
